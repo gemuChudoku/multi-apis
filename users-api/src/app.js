@@ -1,48 +1,98 @@
 import express from "express";
 import cors from "cors";
-import users from "./data.json" assert { type: "json" };
-
+import { pool } from "./db.js";
+ 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+ 
 const PORT = process.env.PORT || 4001;
-const SERVICE = process.env.SERVICE_NAME || "users-api";
-
-app.get("/health", (_req, res) => res.json({ status: "ok", service: SERVICE }));
-
-// GET /users
-app.get("/users", (_req, res) => res.json(users));
-
-// GET /users/:id
-app.get("/users/:id", (req, res) => {
-  const u = users.find(x => String(x.id) === String(req.params.id));
-  if (!u) return res.status(404).json({ error: "User not found" });
-  res.json(u);
+ 
+// Health DB
+app.get("/db/health", async (_req, res) => {
+  try {
+    const r = await pool.query("SELECT 1 AS ok");
+    res.json({ ok: r.rows[0].ok === 1 });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+ 
+// Crear usuario (INSERT real)
+app.post("/users", async (req, res) => {
+  const { name, email } = req.body ?? {};
+  if (!name || !email) return res.status(400).json({ error: "name & email required" });
+ 
+  try {
+    const r = await pool.query(
+      "INSERT INTO users_schema.users(name, email) VALUES($1, $2) RETURNING id, name, email",
+      [name, email]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: "insert failed", detail: String(e) });
+  }
+});
+ 
+// Listar (SELECT real)
+app.get("/users", async (_req, res) => {
+  try {
+    const r = await pool.query("SELECT id, name, email FROM users_schema.users ORDER BY id ASC");
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: "query failed", detail: String(e) });
+  }
 });
 
-// POST /users (simulado)
-app.post("/users", (req, res) => {
-  res.status(201).json({
-    message: "Simulado: se crearía el usuario",
-    payload: req.body
-  });
+// 🔄 Actualizar usuario (UPDATE)
+app.put("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, email } = req.body ?? {};
+
+  if (!name || !email) {
+    return res.status(400).json({ error: "name & email required" });
+  }
+
+  try {
+    const r = await pool.query(
+      "UPDATE users_schema.users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email",
+      [name, email, id]
+    );
+
+    if (r.rowCount === 0) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: "update failed", detail: String(e) });
+  }
 });
 
-// PUT /users/:id (simulado)
-app.put("/users/:id", (req, res) => {
-  res.json({
-    message: "Simulado: se actualizaría el usuario",
-    id: req.params.id,
-    payload: req.body
-  });
+
+// Eliminar usuario (DELETE)
+app.delete("/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const r = await pool.query(
+      "DELETE FROM users_schema.users WHERE id = $1 RETURNING id, name, email",
+      [id]
+    );
+
+    if (r.rowCount === 0) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    res.json({ message: "user deleted", user: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: "delete failed", detail: String(e) });
+  }
 });
 
-// DELETE /users/:id (simulado)
-app.delete("/users/:id", (req, res) => {
-  res.json({ message: "Simulado: se eliminaría el usuario", id: req.params.id });
-});
 
-app.listen(PORT, () => {
-  console.log(`✅ ${SERVICE} listening on http://localhost:${PORT}`);
-});
+ 
+// Mantén /health si ya lo tenías
+app.get("/health", (_req, res) => res.json({ status: "ok", service: "users-api" }));
+ 
+app.listen(PORT, () => console.log(`✅ users-api on http://localhost:${PORT}`));
