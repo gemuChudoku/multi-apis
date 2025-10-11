@@ -44,6 +44,28 @@ app.get("/users", async (_req, res) => {
   }
 });
 
+// Obtener un usuario por ID (SELECT individual)
+app.get("/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const r = await pool.query(
+      "SELECT id, name, email FROM users_schema.users WHERE id = $1",
+      [id]
+    );
+
+    if (r.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: "query failed", detail: String(e) });
+  }
+});
+
+
+
 // 🔄 Actualizar usuario (UPDATE)
 app.put("/users/:id", async (req, res) => {
   const { id } = req.params;
