@@ -122,6 +122,8 @@ app.delete("/products/:id", async (req, res) => {
 });
 
 
+
+
 app.listen(PORT, () => {
   console.log(`✅ ${SERVICE} listening on http://localhost:${PORT}`);
   console.log(`↔️  USERS_API_URL=${USERS_API_URL}`);
