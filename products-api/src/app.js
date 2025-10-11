@@ -17,6 +17,17 @@ const DATABASE_URL = process.env.PRODUCTS_DATABASE_URL || "postgres://caldadmin:
 // Pool de conexión a PostgreSQL
 const pool = new Pool({ connectionString: DATABASE_URL });
 
+
+// Health DB
+app.get("/db/health", async (_req, res) => {
+  try {
+    const r = await pool.query("SELECT 1 AS ok");
+    res.json({ ok: r.rows[0].ok === 1 });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
+});
+
 app.get("/health", (_req, res) => res.json({ status: "ok", service: SERVICE }));
 
 // Ejemplo de comunicación entre servicios
