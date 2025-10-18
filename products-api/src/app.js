@@ -1,18 +1,23 @@
-const express = require("express");
-const fetch = require("node-fetch");
-const Product = require("./models/Product");
-const connectDB = require("./db");
+import express from "express";
+import fetch from "node-fetch";
+import Product from "./models/productsM.js"; // usa .js al final si es módulo ES
+import { connectDB } from "./db.js"; // aquí ya puedes usar import
+
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve("../.env") });
 
 const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 4002;
 const USERS_API_URL = process.env.USERS_API_URL || "http://localhost:4001";
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.MONGO_URI;
 const SERVICE = process.env.SERVICE || "products-api";
 
 // Conexión a MongoDB
-connectDB(DATABASE_URL);
+await connectDB(DATABASE_URL);
 
 // Health DB
 app.get("/db/health", async (_req, res) => {
