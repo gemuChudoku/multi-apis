@@ -18,8 +18,9 @@ services:
     environment:
       - PORT=4002
       - SERVICE_NAME=products-api
-      # Compose resuelve por nombre de servicio: http://users-api:4001
       - USERS_API_URL=http://users-api:4001
+      # URL de conexión a Cosmos DB (MongoDB API)
+      - MONGO_URL=${MONGO_URI}
     ports:
       - "4002:4002"
     depends_on:

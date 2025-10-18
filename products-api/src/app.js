@@ -1,28 +1,24 @@
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-import pkg from "pg";
-
-const { Pool } = pkg;
+const express = require("express");
+const fetch = require("node-fetch");
+const Product = require("./models/Product");
+const connectDB = require("./db");
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4002;
-const SERVICE = process.env.SERVICE_NAME || "products-api";
-const USERS_API_URL = process.env.USERS_API_URL || "http://users-api:4001";
-const DATABASE_URL = process.env.PRODUCTS_DATABASE_URL || "postgres://caldadmin:CARLOS1011083996.@pg-multi-apis-demo-cald.postgres.database.azure.com:5432/multiapisdb?sslmode=require";
+const USERS_API_URL = process.env.USERS_API_URL || "http://localhost:4001";
+const DATABASE_URL = process.env.DATABASE_URL;
+const SERVICE = process.env.SERVICE || "products-api";
 
-// Pool de conexión a PostgreSQL
-const pool = new Pool({ connectionString: DATABASE_URL });
-
+// Conexión a MongoDB
+connectDB(DATABASE_URL);
 
 // Health DB
 app.get("/db/health", async (_req, res) => {
   try {
-    const r = await pool.query("SELECT 1 AS ok");
-    res.json({ ok: r.rows[0].ok === 1 });
+    await Product.findOne(); // simple query
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e) });
   }
@@ -30,18 +26,17 @@ app.get("/db/health", async (_req, res) => {
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: SERVICE }));
 
-// Ejemplo de comunicación entre servicios
-// GET /products/with-users -> concatena productos con conteo de usuarios
+// GET /products/with-users
 app.get("/products/with-users", async (_req, res) => {
   try {
-    const [usersRes, productsRes] = await Promise.all([
+    const [usersRes, products] = await Promise.all([
       fetch(`${USERS_API_URL}/users`),
-      pool.query("SELECT id, name, price, stock FROM products_schema.products ORDER BY id ASC")
+      Product.find()
     ]);
 
     const users = await usersRes.json();
     res.json({
-      products: productsRes.rows,
+      products,
       usersCount: Array.isArray(users) ? users.length : 0
     });
   } catch (e) {
@@ -49,94 +44,73 @@ app.get("/products/with-users", async (_req, res) => {
   }
 });
 
-// GET /products -> listar desde la DB
+// GET /products
 app.get("/products", async (_req, res) => {
   try {
-    const r = await pool.query("SELECT id, name, price, stock FROM products_schema.products ORDER BY id ASC");
-    res.json(r.rows);
+    const products = await Product.find();
+    res.json(products);
   } catch (e) {
     res.status(500).json({ error: "query failed", detail: String(e) });
   }
 });
 
-// GET /products/:id -> obtener producto por ID
+// GET /products/:id
 app.get("/products/:id", async (req, res) => {
   try {
-    const r = await pool.query("SELECT id, name, price, stock FROM products_schema.products WHERE id = $1", [req.params.id]);
-    if (r.rows.length === 0) return res.status(404).json({ error: "Product not found" });
-    res.json(r.rows[0]);
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    res.json(product);
   } catch (e) {
     res.status(500).json({ error: "query failed", detail: String(e) });
   }
 });
 
-// POST /products -> insertar producto
+// POST /products
 app.post("/products", async (req, res) => {
   const { name, price, stock } = req.body ?? {};
   if (!name || !price) return res.status(400).json({ error: "name & price required" });
 
   try {
-    const r = await pool.query(
-      "INSERT INTO products_schema.products(name, price, stock) VALUES($1, $2, $3) RETURNING id, name, price, stock",
-      [name, price, stock ?? 0]
-    );
-    res.status(201).json(r.rows[0]);
+    const newProduct = await Product.create({ name, price, stock: stock ?? 0 });
+    res.status(201).json(newProduct);
   } catch (e) {
     res.status(500).json({ error: "insert failed", detail: String(e) });
   }
 });
 
-
-// PUT /products/:id -> actualizar producto
+// PUT /products/:id
 app.put("/products/:id", async (req, res) => {
-  const { id } = req.params;
   const { name, price, stock } = req.body ?? {};
-
-  if (!name || !price) {
-    return res.status(400).json({ error: "name & price required" });
-  }
+  if (!name || !price) return res.status(400).json({ error: "name & price required" });
 
   try {
-    const r = await pool.query(
-      "UPDATE products_schema.products SET name = $1, price = $2, stock = $3 WHERE id = $4 RETURNING id, name, price, stock",
-      [name, price, stock ?? 0, id]
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      { name, price, stock: stock ?? 0 },
+      { new: true }
     );
 
-    if (r.rowCount === 0) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    res.json(r.rows[0]);
+    if (!updated) return res.status(404).json({ error: "Product not found" });
+    res.json(updated);
   } catch (e) {
     res.status(500).json({ error: "update failed", detail: String(e) });
   }
 });
 
-// DELETE /products/:id -> eliminar producto
+// DELETE /products/:id
 app.delete("/products/:id", async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const r = await pool.query(
-      "DELETE FROM products_schema.products WHERE id = $1 RETURNING id, name, price, stock",
-      [id]
-    );
-
-    if (r.rowCount === 0) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    res.json({ message: "Product deleted", product: r.rows[0] });
+    const deleted = await Product.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Product not found" });
+    res.json({ message: "Product deleted", product: deleted });
   } catch (e) {
     res.status(500).json({ error: "delete failed", detail: String(e) });
   }
 });
 
-
-
-
+// Servidor
 app.listen(PORT, () => {
   console.log(`✅ ${SERVICE} listening on http://localhost:${PORT}`);
   console.log(`↔️  USERS_API_URL=${USERS_API_URL}`);
-  console.log(`🗄️  PRODUCTS_DATABASE_URL=${DATABASE_URL}`);
+  console.log(`🗄️  MONGODB_URL=${DATABASE_URL}`);
 });
