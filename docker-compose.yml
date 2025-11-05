@@ -1,6 +1,9 @@
 version: "3.9"
 
 services:
+  # -------------------------------
+  # USUARIOS (sin Cosmos DB)
+  # -------------------------------
   users-api:
     build: ./users-api
     container_name: users-api
@@ -12,6 +15,9 @@ services:
       - "4001:4001"
     restart: unless-stopped
 
+  # -------------------------------
+  # PRODUCTOS (usa Cosmos DB)
+  # -------------------------------
   products-api:
     build: ./products-api
     container_name: products-api
@@ -19,10 +25,31 @@ services:
       - PORT=4002
       - SERVICE_NAME=products-api
       - USERS_API_URL=http://users-api:4001
-      # URL de conexión a Cosmos DB (MongoDB API)
-      - MONGO_URI=${MONGO_URI}
+      - MONGO_URI=${MONGO_URI}   # 🔹 Cosmos DB (API Mongo)
     ports:
       - "4002:4002"
     depends_on:
       - users-api
     restart: unless-stopped
+
+  # -------------------------------
+  # sales (usa Cosmos DB)
+  # -------------------------------
+  sales-api:
+    build: ./sales-api
+    container_name: sales-api
+    environment:
+      - PORT=4003
+      - SERVICE_NAME=v-sales-api
+      - USERS_API_URL=http://users-api:4001
+      - PRODUCTS_API_URL=http://products-api:4002
+      - MONGO_URI=${MONGO_URI}     # 🔹 Cosmos DB (API Mongo)
+    ports:
+      - "4003:4003"
+    depends_on:
+      - users-api
+      - products-api
+    restart: unless-stopped
+
+
+
