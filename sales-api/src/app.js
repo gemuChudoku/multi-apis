@@ -144,7 +144,7 @@ app.delete("/sales/:id", async (req, res) => {
 });
 
 // ========================
-// 🔸 Servidor
+// 🔸 Servidor uwu
 // ========================
 app.listen(PORT, () => {
   console.log(`✅ ${SERVICE} listening on http://localhost:${PORT}`);

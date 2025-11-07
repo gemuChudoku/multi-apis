@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS refunds_schema.refunds (
     sale_id VARCHAR NOT NULL,
     product_name VARCHAR NOT NULL,
     client_name VARCHAR NOT NULL,
-    seller_id INTEGER REFERENCES users_schema.users(id),
+    seller VARCHAR NOT NULL,
     refund_date DATE DEFAULT CURRENT_DATE,
     quantity INTEGER NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS refunds_schema.refunds (
 );
 
     Drop TABLE users_schema.users
+
+    Drop TABLE refunds_schema.refunds
 
     TRUNCATE TABLE users_schema.users RESTART IDENTITY;
 
