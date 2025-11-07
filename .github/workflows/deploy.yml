@@ -1,4 +1,4 @@
-name: Build & Push all services to ACR (monorepo)
+name: Build & Push all services to ACR (multi-registry)
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - "users-api/**"
       - "products-api/**"
       - "sales-api/**"
+      - "refunds-api/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -21,16 +22,22 @@ jobs:
           - service: users-api
             context: users-api
             image: users-api
+            registry: 1
 
           - service: products-api
             context: products-api
             image: products-api
+            registry: 1
 
           - service: sales-api
             context: sales-api
             image: sales-api
+            registry: 2
 
-
+          - service: refunds-api
+            context: refunds-api
+            image: refunds-api
+            registry: 2
 
     steps:
       - name: 📥 Checkout
@@ -41,20 +48,36 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 🔑 Login to ACR
+      - name: 🔑 Login to ACR 1
+        if: matrix.registry == 1
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: 🔑 Login to ACR 2
+        if: matrix.registry == 2
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER2 }}
+          username: ${{ secrets.ACR_USERNAME2 }}
+          password: ${{ secrets.ACR_PASSWORD2 }}
+
       - name: 🏷️ Set version tag (short sha)
         id: vars
         run: echo "TAG=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - name: 🏗️ Build & Push ${{ matrix.service }}
+      - name: 🏗️ Build & Push ${{ matrix.service }} to ACR ${{ matrix.registry }}
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ matrix.image }}:latest ${{ matrix.context }}
-          docker tag  ${{ secrets.ACR_LOGIN_SERVER }}/${{ matrix.image }}:latest ${{ secrets.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ steps.vars.outputs.TAG }}
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ matrix.image }}:latest
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ matrix.image }}:${{ steps.vars.outputs.TAG }}
+          # Determine which registry to use
+          if [ "${{ matrix.registry }}" == "1" ]; then
+            REGISTRY="${{ secrets.ACR_LOGIN_SERVER }}"
+          else
+            REGISTRY="${{ secrets.ACR_LOGIN_SERVER2 }}"
+          fi
+          
+          docker build -t $REGISTRY/${{ matrix.image }}:latest ${{ matrix.context }}
+          docker tag $REGISTRY/${{ matrix.image }}:latest $REGISTRY/${{ matrix.image }}:${{ steps.vars.outputs.TAG }}
+          docker push $REGISTRY/${{ matrix.image }}:latest
+          docker push $REGISTRY/${{ matrix.image }}:${{ steps.vars.outputs.TAG }}

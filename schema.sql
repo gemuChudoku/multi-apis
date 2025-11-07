@@ -19,6 +19,21 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA users_schema TO caldadmin;
 
 
 
+CREATE SCHEMA IF NOT EXISTS refunds_schema AUTHORIZATION caldadmin;
+CREATE TABLE IF NOT EXISTS refunds_schema.refunds (
+    id SERIAL PRIMARY KEY,
+    sale_id VARCHAR NOT NULL,
+    product_name VARCHAR NOT NULL,
+    client_name VARCHAR NOT NULL,
+    seller_id INTEGER REFERENCES users_schema.users(id),
+    refund_date DATE DEFAULT CURRENT_DATE,
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending'
+);
+
     Drop TABLE users_schema.users
 
     TRUNCATE TABLE users_schema.users RESTART IDENTITY;

@@ -51,5 +51,18 @@ services:
       - products-api
     restart: unless-stopped
 
+ # -------------------------------
+  # REFUNDS (sin Cosmos DB)
+  # -------------------------------
+  refunds-api:
+    build: ./refunds-api
+    container_name: refunds-api
+    environment:
+      - PORT=4004
+      - SERVICE_NAME=refunds-api
+      - DATABASE_URL=${USERS_DATABASE_URL}
+    ports:
+      - "4004:4004"
+    restart: unless-stopped
 
 
