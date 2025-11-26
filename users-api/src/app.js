@@ -11,7 +11,6 @@ app.use(express.json());
 const PORT = process.env.PORT || 4001;
  
 
-app.use(verifyJWT);
 
 // Health DB
 app.get("/db/health", async (_req, res) => {
