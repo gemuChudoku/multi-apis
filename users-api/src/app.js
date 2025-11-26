@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { pool } from "./db.js";
-import { verifyJWT } from "./middleware/auth.js";
+import { verifyJWT } from "../middleware/auth.js";
+
 
  
 const app = express();
@@ -11,6 +12,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 4001;
  
 
+app.use(verifyJWT);
 
 // Health DB
 app.get("/db/health", async (_req, res) => {
