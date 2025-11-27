@@ -7,6 +7,10 @@ RUN npm ci --omit=dev
 
 COPY src ./src
 
+
+# Copias middleware
+COPY middleware ./middleware
+
 EXPOSE 4002
 ENV PORT=4002 SERVICE_NAME=products-api
 CMD ["node", "src/app.js"]
