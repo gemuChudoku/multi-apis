@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { pool } from "./db.js";
-import { verifyJWT } from "../middleware/auth.js";
+import { authMiddleware } from './auth.js';
+app.use(authMiddleware);
 
 
  
@@ -12,7 +13,47 @@ app.use(express.json());
 const PORT = process.env.PORT || 4001;
  
 
-app.use(verifyJWT);
+// Mejora opcional para tu backend
+app.post("/register", async (req, res) => {
+  const { full_name, email, phone_number, role, company, password } = req.body ?? {};
+  
+  // Validaciones más específicas
+  if (!full_name?.trim()) {
+    return res.status(400).json({ error: "Nombre completo requerido" });
+  }
+  if (!email?.trim() || !/\S+@\S+\.\S+/.test(email)) {
+    return res.status(400).json({ error: "Email válido requerido" });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: "Contraseña debe tener al menos 6 caracteres" });
+  }
+  if (!role?.trim()) {
+    return res.status(400).json({ error: "Rol requerido" });
+  }
+
+  try {
+    const r = await pool.query(
+      `INSERT INTO users_schema.users(full_name, email, phone_number, role, company, password) 
+       VALUES($1, $2, $3, $4, $5, $6) 
+       RETURNING id, full_name, email, phone_number, role, company, status, created_at`,
+      [full_name.trim(), email.trim(), phone_number?.trim(), role.trim(), company?.trim(), password]
+    );
+    
+    res.status(201).json({
+      message: "Usuario registrado exitosamente",
+      user: r.rows[0]
+    });
+    
+  } catch (e) {
+    if (e.code === '23505') {
+      return res.status(409).json({ error: "El email ya está registrado" });
+    }
+    console.error('Error en registro:', e);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+
 
 app.post("/users/login", async (req, res) => {
   const { email, password } = req.body ?? {};
