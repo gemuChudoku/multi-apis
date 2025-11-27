@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { pool } from "./db.js";
-import { authMiddleware } from './auth.js';
-app.use(authMiddleware);
+import { verifyJWT } from './auth.js';
+
 
 
  
@@ -53,6 +53,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
+app.use(verifyJWT);
 
 
 app.post("/users/login", async (req, res) => {
