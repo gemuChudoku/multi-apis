@@ -65,7 +65,7 @@ export function verifyJWT(req, res, next) {
 export function authMiddleware(req, res, next) {
   // Lista de rutas públicas que NO requieren JWT
   const publicRoutes = [
-    '/users/register',    // Registro de usuarios
+    '/register',    // Registro de usuarios
     '/auth/login',        // Login
     '/health',           // Health check
     '/',                 // Ruta raíz si es pública
