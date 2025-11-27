@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { pool } from "./db.js";
-import { verifyJWT } from './auth.js';
+import { verifyJWT } from '../middleware/auth.js';
 
 
 
