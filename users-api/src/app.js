@@ -35,7 +35,7 @@ app.post("/register", async (req, res) => {
     const r = await pool.query(
       `INSERT INTO users_schema.users(full_name, email, phone_number, role, company, password) 
        VALUES($1, $2, $3, $4, $5, $6) 
-       RETURNING id, full_name, email, phone_number, role, company, status, created_at`,
+       RETURNING id, full_name, email, phone_number, role, company, status`,
       [full_name.trim(), email.trim(), phone_number?.trim(), role.trim(), company?.trim(), password]
     );
     
