@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { pool } from "./db.js";
+import { verifyJWT } from '../middleware/auth.js';
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,9 @@ app.get("/db/health", async (_req, res) => {
     res.status(500).json({ ok: false, error: String(e) });
   }
 });
+
+
+app.use(verifyJWT);
 
 // Crear refund (INSERT)
 app.post("/refunds", async (req, res) => {

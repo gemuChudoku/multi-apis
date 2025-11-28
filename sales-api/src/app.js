@@ -4,6 +4,7 @@ import Sale from "./models/salesM.js"; // modelo de ventas
 import { connectDB } from "./db.js";
 import dotenv from "dotenv";
 import path from "path";
+import { verifyJWT } from '../middleware/auth.js';
 
 dotenv.config({ path: path.resolve("../.env") });
 
@@ -16,8 +17,13 @@ const PRODUCTS_API_URL = process.env.PRODUCTS_API_URL || "http://localhost:4002"
 const DATABASE_URL = process.env.MONGO_URI;
 const SERVICE = process.env.SERVICE || "sales-api";
 
+
+
 // 🔹 Conexión a CosmosDB / MongoDB
 await connectDB(DATABASE_URL);
+
+
+
 
 // ========================
 // 🔸 Health Checks
@@ -32,6 +38,10 @@ app.get("/db/health", async (_req, res) => {
 });
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: SERVICE }));
+
+
+
+app.use(verifyJWT);
 
 // ========================
 // 🔸 Endpoints
