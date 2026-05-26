@@ -1,68 +1,52 @@
-version: "3.9"
+version: '3.8'
 
 services:
-  # -------------------------------
-  # USUARIOS (sin Cosmos DB)
-  # -------------------------------
-  users-api:
-    build: ./users-api
-    container_name: users-api
-    environment:
-      - PORT=4001
-      - SERVICE_NAME=users-api
-      - DATABASE_URL=${USERS_DATABASE_URL}
+  # API - Servicio principal
+  api:
+    build: ./api
     ports:
-      - "4001:4001"
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    networks:
+      - monitoring
     restart: unless-stopped
 
-  # -------------------------------
-  # PRODUCTOS (usa Cosmos DB)
-  # -------------------------------
-  products-api:
-    build: ./products-api
-    container_name: products-api
-    environment:
-      - PORT=4002
-      - SERVICE_NAME=products-api
-      - USERS_API_URL=http://users-api:4001
-      - MONGO_URI=${MONGO_URI}   # 🔹 Cosmos DB (API Mongo)
+  # Prometheus - Servicio de monitoreo
+  prometheus:
+    image: prom/prometheus:latest
     ports:
-      - "4002:4002"
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Grafana - Servicio de visualización
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - monitoring
     depends_on:
-      - users-api
+      - prometheus
     restart: unless-stopped
 
-  # -------------------------------
-  # sales (usa Cosmos DB)
-  # -------------------------------
-  sales-api:
-    build: ./sales-api
-    container_name: sales-api
-    environment:
-      - PORT=4003
-      - SERVICE_NAME=v-sales-api
-      - USERS_API_URL=http://users-api:4001
-      - PRODUCTS_API_URL=http://products-api:4002
-      - MONGO_URI=${MONGO_URI}     # 🔹 Cosmos DB (API Mongo)
-    ports:
-      - "4003:4003"
-    depends_on:
-      - users-api
-      - products-api
-    restart: unless-stopped
+networks:
+  monitoring:
+    driver: bridge
 
- # -------------------------------
-  # REFUNDS (sin Cosmos DB)
-  # -------------------------------
-  refunds-api:
-    build: ./refunds-api
-    container_name: refunds-api
-    environment:
-      - PORT=4004
-      - SERVICE_NAME=refunds-api
-      - DATABASE_URL=${USERS_DATABASE_URL}
-    ports:
-      - "4004:4004"
-    restart: unless-stopped
-
-
+volumes:
+  prometheus-data:
+  grafana-data:
